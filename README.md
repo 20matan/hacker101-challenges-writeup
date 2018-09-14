@@ -5,6 +5,64 @@ If you have some better solutions, feel free to share!
 **Note: for those challenges you should use web browser without XSS auditor. I used firefox.** <br>
 **I might miss some exploits, so feel free to suggest some**
 
+### Level 0: Breakerbank
+1. _**CSRF**_:
+Viewing the page source, there is no CSRF protection. so we can create POC of CSRF for sending money to our account.<br>
+you use burp/any other tool for that.
+2. _**IDOR**_:
+Looking at the transfer money request, we see there are "to" and "amount" fields. if we intercept the request, and change the "to" to our bank id, and add `from=1` in the body payload, we can transfer money from the bank account with the id 1 to our account.
+3. _**Reflected XSS**_:
+Clicking on the `personal payment link`, we navigate to a site with url param `to`, and the value of this to param is inside the `Destination account` input. But, this field is not vulnerable to XSS (or at least i didnt succeed to).<br>
+But, adding to the url `...&amount=value`, we see that this value is in the amount field. so using the payload `...&amount="><img src="/" onerror="alert(1)"`, will result in alert popup.
+4. _**Reflected XSS**_:
+Using the same payload we used in 3, we place this payload in amount input field and press `Transfer`. it will result in validation error about not being integer, and an alert popup.<br>
+(They wrote in the source that they have 4 vulns. im not sure if this is the 4th, but i couldnt find anything else. so if you found something else, lmk)
+
+
+### Level 1: Breakbook
+1. _**CSRF**_:
+Althought there is a csrf token in the post comment, the backend only validates the token length (32). so passing any string with the same length, will result in succesfully csrf vulnerability.
+2. _**Stored XSS**_:
+Following the first comment we see, it looks like every link in the comment becomse `<a>`.<br>
+So using the payload `http://a.b.c"/onmouseover="alert(1)`, when user will hover his mouse over our comment, the script will be executed.
+3. _**Forced Browsing**_:
+Clicking the `Permalink` for any comment, will navigate us to `/post?id=1337` (real story with the 1337<br>
+Changing the id to any other id, will allow us to see what posts other users wrote.<br>
+Moreover, passing an id that is not exist in the system, will allow us to see the Trceback.
+4. Im not sure what is the fourth vuln (they wrote there are 4). I didnt succeed to find another XSS vuln, so my guess is the 4th is csrf for post details.
+
+### Level 2: Breaker Profile
+1. _**Stored XSS**_:
+We can run code through the description of the user. if we change it to something like `... [green"onmouseover="alert(1)" | text1 ] ...`, mouse hovering the text1 will result in alert popup.
+2. _**Stored XSS**_:
+We can run code using the Profile picutre URL. notice that it validate that the URL ends in PNG/JPG/ICO, so using the payload `"><img src="/" onerror="alert(1)" a=".png` will result in alert popup when we look at our profile.
+3. _**Stored XSS**_:
+The same as 2, but when we are in the edit page.
+4. _**Reflected XSS**_:
+Pressing the `Link to your profile` link will navigate us to a page with the url `...?id=OUR_ID`. changing this id to `blablabla`, will lead us to page which reflects our blablabla id. so using the url `?id=a<script>alert(1)</script>` will lead to XSS.
+5. _**Reflected XSS**_:
+In the edit profile, there is `id` url param. this id is reflected to the `action` attribute in the form tag.<br>
+changing the URL to `...?id=1"><img src="/" onerror="alert(1)`, will result in the alert popup.
+6. _**Unrelated Bonus**_:
+Ok, so they wrote there is this "Unrelated Bonus", so im not sure this is the vuln, but i couldnt find anything better: <br>
+We can place any domain in the image url, which allows us to serve an image with malicious payload that contain js.
+
+### Level 3: Breaker CMS
+1. _**Improper Authorization**_:
+Looking at the source code, it seems that the code will show `<a>` if the user has a cookie with `admin=1` value in it.<br>
+So after changing the admin=0 to admin=1 in the cookie, a new link appear.
+2. _**Stored XSS**_: 
+After clicking the `Edit page` link, we can edit the page title and body.<br>
+placing in both the payload `<h1>a</h1>`, shows that the body is vulnerable to XSS, but it blocks the `<script>` tag.<br>
+so using the payload `<img src="/" onerror="alert(1)">`, we succesfully see the alert popup.
+3. _**Stored XSS**_:
+Looking at the page source, we can see that the `<title>` tag contains the page title (the one we can edit).<br>
+so changing the title to `</title><script>alert(1)</script>`, will result in succesfull XSS.
+4. _**CSRF**_:
+The edit page form has no CSRF defense mechanism.
+
+### Level 4: Breaker News
+Sorry, but i didnt do this level. when i entered the challenge, i got like 10 alerts. seems like there is no sandbox for each user, so i prefered to move on to the next challenges.
 
 ### Level 5: Document Repository
 1. _**Reflected XSS**_:
@@ -13,7 +71,7 @@ changing the path url param to `<script>alert(1)</script>`, we will see the aler
 2. _**Path Traversal**_:
 Seems like the site lists the files in the directory we supply through "path" url param.<br>
 Changing the path to `../../../../../../../../etc`, will list all the files in this dirctory.<br>
-**tip: when you are in the root, you can keep do more '../'s, how much you want, you will still be in the root directory. so when you have path traversal, just do some more ../ to be more sure you reach the root dir**
+**tip: when you are in the root, you can keep do more '../'s. if you are already in the root dir, you will still be in the root dir. so when you have path traversal, just do some more ../ to be more sure you reach the root dir**
 3. _**Command injection**_:
 It looks like `Search in directory` form search inside all the files in the current dir for the string we pass. so i looked at google for `linux search string in files`, and seems like the command it run on the server is something like `grep -rnw 'DIRECTORY' -e 'TEXT_TO_SAERRCH'`.<br>
 Moreover, seems like if no matches were found, it returns empty page. so to exploit this feature, i used the payload `q" && ls -la"`, and on the bottom of the list i indeed saw a result of `ls -la` command.

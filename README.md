@@ -99,3 +99,7 @@ We will use the default admin value that we had, and using random password, we w
 using the payload `QQ' OR 1='1--`, we get the message 'Invalid password', which means we bypassed the username filter in the sql query.<br>
 using the payload `'` as the username, we can see the sql query;
 It tries to get the password of the user with the username we pass. so, using the payload `=QQ' UNION SELECT '12345`, we return to the query result the password '12345', and if we send this password in the form, we bypass the authentication
+
+### Level 8: Document Exchange
+1. _**Reflected XSS**_:
+The mime type value is vulnerable to reflected XSS. intercepting the request and changing the Content-Type from `image/jpeg` (or whatever file type you try to upload) to `Content-Type: image/jpeg<img/src="a/"/onerror="console.log(1)">` will result in XSS
